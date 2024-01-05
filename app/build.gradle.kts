@@ -45,6 +45,8 @@ dependencies {
     implementation("com.google.android.material:material:1.1.0")
     implementation("com.google.android.gms:play-services-location:17.0.0")
     implementation("com.karumi:dexter:6.0.1")
+    implementation ("com.squareup.retrofit2:retrofit:2.6.2")
+    implementation ("com.squareup.retrofit2:converter-gson:2.6.2")
 
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
