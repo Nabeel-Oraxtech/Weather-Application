@@ -16,7 +16,12 @@ import android.os.Bundle
 import android.os.Looper
 import android.provider.Settings
 import android.util.Log
+import android.view.Menu
+import android.view.MenuItem
+import android.widget.ImageView
+import android.widget.TextView
 import android.widget.Toast
+import com.example.weatherapp.databinding.ActivityMainBinding
 import com.example.weatherapp.models.WeatherResponse
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationCallback
@@ -33,6 +38,10 @@ import retrofit2.Response
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.create
+import java.sql.Date
+import java.text.SimpleDateFormat
+import java.util.Locale
+import java.util.TimeZone
 
 
 class MainActivity : AppCompatActivity() {
@@ -48,7 +57,6 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(this, "Location Not Enabled", Toast.LENGTH_SHORT).show()
             val intent=Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
             startActivity(intent)
-
         }
         else{
                 Dexter.withActivity(this).withPermissions(
@@ -74,7 +82,6 @@ class MainActivity : AppCompatActivity() {
                     {
                         rationalDialogForPermissions()
                     }
-
                 }).onSameThread().check()
         }
     }
@@ -95,7 +102,6 @@ class MainActivity : AppCompatActivity() {
 
             getLocaionWeatherDetails(latitude,longitude)
         }
-
     }
     fun getLocaionWeatherDetails(latitude:Double,longitude:Double){
         if (Constants.isNetworkAvailable(this)){
@@ -117,8 +123,11 @@ class MainActivity : AppCompatActivity() {
                 ) {
                     if (response.isSuccessful){
                         hideProgressDialog()
-                   val weatherList:WeatherResponse?=response.body()
-                    Log.i("Response Weather","$weatherList")
+                   val weatherList:WeatherResponse?= response.body()
+
+                        setupUI(weatherList!!)
+
+                    Log.i("Response Result","$weatherList")
                     }else{
                         var rc=response.code()
                         when(rc){
@@ -134,14 +143,11 @@ class MainActivity : AppCompatActivity() {
                         }
                     }
                 }
-
                 override fun onFailure(call: Call<WeatherResponse>, t: Throwable) {
                     Log.e("Errorrrr",t!!.message.toString())
                     hideProgressDialog()
                 }
-
             })
-
         }
         else{
             Toast.makeText(this, "No network available", Toast.LENGTH_SHORT).show()
@@ -183,5 +189,85 @@ class MainActivity : AppCompatActivity() {
         mProgressDialog!!.dismiss()
         }
 
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
+        menuInflater.inflate(R.menu.menu_main,menu)
+        return super.onCreateOptionsMenu(menu)
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when(item.itemId){
+            R.id.actionRefresh ->{
+                requestLocationData()
+                true
+            }
+        else ->{
+        super.onOptionsItemSelected(item)
+               }
+        }
+    }
+    private fun setupUI(weatherList:WeatherResponse){
+        val tvMain = findViewById<TextView>(R.id.tvMain)
+        val tvMainDescription = findViewById<TextView>(R.id.tvMainDescription)
+        val tvTemp = findViewById<TextView>(R.id.tvTemp)
+        val tvSunrise=findViewById<TextView>(R.id.tvSunriseTime)
+        val tvSunset=findViewById<TextView>(R.id.tvSunsetTime)
+        val tvHumidity=findViewById<TextView>(R.id.tvHumidity)
+        val tvMin=findViewById<TextView>(R.id.tvMin)
+        val tvMax=findViewById<TextView>(R.id.tvMax)
+        val tvSpeed=findViewById<TextView>(R.id.tvSpeed)
+        val tvName=findViewById<TextView>(R.id.tvName)
+        val tvCountry=findViewById<TextView>(R.id.tvCountry)
+        val ivMain=findViewById<ImageView>(R.id.ivMain)
+
+        for (i in weatherList.weather.indices){
+            Log.i("Weather Name",weatherList.weather.toString())
+
+           tvMain?.text=weatherList.weather[i].main
+           tvMainDescription.text=weatherList.weather[i].description
+           tvTemp?.text=weatherList.main.temp.toString() +
+                   getUnit(application.resources.configuration.locales.toString())
+            tvSunrise?.text=unixTime(weatherList.sys.sunrise)
+            tvSunset?.text=unixTime(weatherList.sys.sunset)
+
+            tvHumidity.text=weatherList.main.humidity.toString()+ "per cent"
+            tvMin.text=weatherList.main.temp_min.toString()+ "min"
+            tvMax.text=weatherList.main.temp_max.toString()+ "max"
+            tvSpeed.text=weatherList.wind.speed.toString()
+            tvName.text=weatherList.name
+            tvCountry.text=weatherList.sys.country
+
+            when(weatherList.weather[i].icon){
+                "01d" -> ivMain.setImageResource(R.drawable.sunny)
+                "02d" -> ivMain.setImageResource(R.drawable.cloud)
+                "03d" -> ivMain.setImageResource(R.drawable.cloud)
+                "04d" -> ivMain.setImageResource(R.drawable.cloud)
+                "04n" -> ivMain.setImageResource(R.drawable.cloud)
+                "10d" -> ivMain.setImageResource(R.drawable.rain)
+                "11d" -> ivMain.setImageResource(R.drawable.storm)
+                "13d" -> ivMain.setImageResource(R.drawable.snowflake)
+                "01n" -> ivMain.setImageResource(R.drawable.cloud)
+                "02n" -> ivMain.setImageResource(R.drawable.cloud)
+                "03n" -> ivMain.setImageResource(R.drawable.cloud)
+                "10n" -> ivMain.setImageResource(R.drawable.cloud)
+                "11n" -> ivMain.setImageResource(R.drawable.rain)
+                "13n" -> ivMain.setImageResource(R.drawable.snowflake)
+            }
+    }}
+
+    private fun getUnit(value:String):String?{
+        var value="°C"
+        if ("US" == value || "LR" ==value || "MM" == value){
+            value="°F"
+        }
+        return value
+    }
+
+    private fun unixTime(timex:Long):String?{
+        val date=Date(timex * 1000L)
+        val sdf=SimpleDateFormat("HH:mm", Locale.getDefault())
+        sdf.timeZone= TimeZone.getDefault()
+        return sdf.format(date)
     }
 }
